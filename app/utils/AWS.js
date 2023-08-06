@@ -4,8 +4,8 @@ import AWS from 'aws-sdk';
 AWS.config.update({
   region: 'ca-central-1',
   // Add your AWS credentials here if not using IAM roles
-  accessKeyId: 'AKIA4DSZ6XPBXBTFZKVY',
-  secretAccessKey: '0WQtuyTJGnV9Ugv1IrcTh4J8mYSZz1Df9M9pjnfV',
+  accessKeyId: '8547812781274974',
+  secretAccessKey: 'biduiwidAJABHDBJDJWD',
   dynamoDbCrc32: false
 });
 
