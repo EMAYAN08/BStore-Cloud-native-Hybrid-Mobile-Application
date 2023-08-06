@@ -7,7 +7,7 @@ BStore is cloud native hybrid mobile application project that leverages React Na
 React Native is a popular JavaScript framework for building native mobile apps using a single codebase. You will develop cross-platform mobile applications for both iOS and Android platforms, leveraging the efficiency and flexibility of React Native.
 
 ## Demo Video
-![Demo Video](https://drive.google.com/file/d/1UhetrT4QObIRJGgQIatmlh3aJZUU_C-f/view?usp=sharing)
+[Demo Video](https://drive.google.com/file/d/1UhetrT4QObIRJGgQIatmlh3aJZUU_C-f/view?usp=sharing)
 
 ## AWS Services
 The application heavily relies on several AWS services. Here's a brief rundown:
