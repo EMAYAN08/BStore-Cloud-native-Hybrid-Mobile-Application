@@ -1,48 +1,58 @@
-> BeautyBlend : Your ultimate Beauty Hub
-> ![Thumbnail Of the project](./snap.png)
+# BStore: Your Ultimate Beauty Products Store
 
-> Follow us for more projects like this [Check on our website](https://codewithvetri.web.app)
 
-BeautyBlend is an exciting project that combines the power of React Native and Sanity to create a captivating hybrid mobile app for a beauty product shop. In this project, you will have the opportunity to learn and explore various technologies, including:
+BStore is cloud native hybrid mobile application project that leverages React Native and several AWS services to create a captivating, user-friendly mobile app for a beauty product shop.
 
-# React Native
+## React Native
+React Native is a popular JavaScript framework for building native mobile apps using a single codebase. You will develop cross-platform mobile applications for both iOS and Android platforms, leveraging the efficiency and flexibility of React Native.
 
-```
-React Native is a popular JavaScript framework that allows you to build native mobile apps using a single codebase. You will learn how to develop cross-platform mobile applications for both iOS and Android platforms, leveraging the efficiency and flexibility of React Native.
-```
+## AWS Services
+The application heavily relies on several AWS services. Here's a brief rundown:
 
-# Sanity.IO
+- AWS Lambda for running serverless functions.
+- AWS S3 for storing high-resolution product images.
+- AWS DynamoDB for storing product details.
+- AWS Cognito for user authentication.
+- AWS SNS for sending notifications to users.
+- AWS API Gateway for managing the application's APIs.
+- AWS Step Functions for coordinating multiple AWS lambda functions into serverless workflows.
 
-```
-Sanity is a highly customizable and collaborative content management system (CMS) that enables you to manage and deliver content seamlessly. You will dive into Sanity's features and learn how to integrate it into your React Native app to handle product information, images, descriptions, and other relevant data.
-```
+## Architecture Diagram
 
-# Hybrid App Development
+![Alt text](architecture.png)
 
-```
-By using React Native, you will gain experience in building hybrid mobile apps, which provide the advantage of code reusability across multiple platforms. This project will help you understand the fundamentals of hybrid app development and how to leverage the strengths of React Native to deliver a consistent user experience on both iOS and Android.
-```
+## Categories of AWS Services used in this application
+![Alt text](./Screenshots/UsedServices.png)
 
-# UI/UX Designs
 
-```
-Creating an appealing and user-friendly interface is crucial for a beauty product shop app. You will have the opportunity to enhance your UI/UX design skills and implement intuitive navigation, stunning visuals, and smooth animations to provide an engaging user experience.
-```
+## Demonstration Screenshots
 
-# API Integrations
+# Demo on iOS
 
-```
-You will learn how to interact with external APIs to fetch additional data, such as user reviews, product ratings, and stock availability. This integration will allow you to provide up-to-date information to users and enhance the functionality of the app.
-```
+|   |   |   |   |
+|---|---|---|---|
+| ![Thumbnail Of the project](./Screenshots/1.jpg) | ![Thumbnail Of the project](./Screenshots/2.jpg) | ![Thumbnail Of the project](./Screenshots/3.jpg) | ![Thumbnail Of the project](./Screenshots/4.jpg) |
+| ![Thumbnail Of the project](./Screenshots/5.jpg) | ![Thumbnail Of the project](./Screenshots/6.jpg) | ![Thumbnail Of the project](./Screenshots/7.jpg) | ![Thumbnail Of the project](./Screenshots/8.jpg) |
+| ![Thumbnail Of the project](./Screenshots/9.jpg) | ![Thumbnail Of the project](./Screenshots/10.jpg) | ![Thumbnail Of the project](./Screenshots/11.jpg) | ![Thumbnail Of the project](./Screenshots/12.jpg) |
+| ![Thumbnail Of the project](./Screenshots/13.jpg) | ![Thumbnail Of the project](./Screenshots/14.jpg) | ![Thumbnail Of the project](./Screenshots/15.jpg) | ![Thumbnail Of the project](./Screenshots/16.jpg) |
+| ![Thumbnail Of the project](./Screenshots/17.jpg) | ![Thumbnail Of the project](./Screenshots/18.jpg) | ![Thumbnail Of the project](./Screenshots/19.jpg) | ![Thumbnail Of the project](./Screenshots/20.jpg) |
+| ![Thumbnail Of the project](./Screenshots/21.jpg) | ![Thumbnail Of the project](./Screenshots/22.jpg) | ![Thumbnail Of the project](./Screenshots/23.jpg) | ![Thumbnail Of the project](./Screenshots/24.jpg) |
+| ![Thumbnail Of the project](./Screenshots/25.jpg) | ![Thumbnail Of the project](./Screenshots/26.jpg) | ![Thumbnail Of the project](./Screenshots/27.jpg) | ![Thumbnail Of the project](./Screenshots/28.jpg) |
+| ![Thumbnail Of the project](./Screenshots/29.jpg) | ![Thumbnail Of the project](./Screenshots/30.jpg) | ![Thumbnail Of the project](./Screenshots/31.jpg) | ![Thumbnail Of the project](./Screenshots/32.jpg) |
+| ![Thumbnail Of the project](./Screenshots/33.jpg) | ![Thumbnail Of the project](./Screenshots/34.jpg) | ![Thumbnail Of the project](./Screenshots/35.jpg) | ![Thumbnail Of the project](./Screenshots/36.jpg) |
 
-# To create an expo app
 
-```
+## Basic Workflow of my application
+
+![Thumbnail Of the project](./Screenshots/workflow.png)
+
+## Getting Started
+
+### To create an Expo app
+
+```bash
 expo init
 ```
-
-# To start the sanity server
-
+### To run the app
 ```
-yarn dev
-```
+npx expo start --tunnel
