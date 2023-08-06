@@ -1,0 +1,311 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation Template for API Gateway, Lambda Functions, and Step Functions
+
+Resources:
+  WishlistStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: WishlistStateMachineTestVersion
+      RoleArn: arn:aws:iam::391508159389:role/LabRole
+      StateMachineType: EXPRESS
+      DefinitionString:
+        !Sub |
+          {
+            "Comment": "Wishlist and Cart Orchestration State Machine",
+            "StartAt": "ClassifyAction",
+            "States": {
+              "ClassifyAction": {
+                "Type": "Choice",
+                "Choices": [
+                  {
+                    "Variable": "$.action",
+                    "StringEquals": "wishlist",
+                    "Next": "WishlistAction"
+                  },
+                  {
+                    "Variable": "$.action",
+                    "StringEquals": "cart",
+                    "Next": "CartAction"
+                  }
+                ],
+                "Default": "InvalidAction"
+              },
+              "WishlistAction": {
+                "Type": "Choice",
+                "Choices": [
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "POST",
+                    "Next": "GetWishlistItems"
+                  },
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "PUT",
+                    "Next": "PutItemWishlist"
+                  },
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "DELETE",
+                    "Next": "DeleteWishlistItem"
+                  }
+                ],
+                "Default": "InvalidAction"
+              },
+              "CartAction": {
+                "Type": "Choice",
+                "Choices": [
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "POST",
+                    "Next": "GetCartItems"
+                  },
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "PUT",
+                    "Next": "PutItemCart"
+                  },
+                  {
+                    "Variable": "$.httpMethod",
+                    "StringEquals": "DELETE",
+                    "Next": "DeleteCartItem"
+                  }
+                ],
+                "Default": "InvalidAction"
+              },
+              "GetWishlistItems": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:FetchWishlistItems",
+                "End": true
+              },
+              "PutItemWishlist": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:PutWishlistItem",
+                "End": true
+              },
+              "DeleteWishlistItem": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:DeleteWishlistItems",
+                "End": true
+              },
+              "GetCartItems": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:FetchCartItems",
+                "End": true
+              },
+              "PutItemCart": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:PutCartItem",
+                "End": true
+              },
+              "DeleteCartItem": {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:us-east-1:391508159389:function:DeleteCartItem",
+                "End": true
+              },
+              "InvalidAction": {
+                "Type": "Fail",
+                "Error": "InvalidActionError",
+                "Cause": "Invalid action provided in the input data."
+              }
+            }
+          }
+
+  WishlistStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/state-machine/WishlistStateMachineTestVersion
+      RetentionInDays: 30
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: TestAPIVersion2
+
+  WishlistResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: "wishlist"
+
+  WishlistGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref WishlistResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"wishlist\", \"httpMethod\": \"POST\", \"userID\": \"$input.path('$.userID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+  WishlistPutMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref WishlistResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"wishlist\", \"httpMethod\": \"PUT\", \"userID\": \"$input.path('$.userID')\", \"itemID\": \"$input.path('$.itemID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+  WishlistDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref WishlistResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"wishlist\", \"httpMethod\": \"DELETE\", \"userID\": \"$input.path('$.userID')\", \"itemID\": \"$input.path('$.itemID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+  CartResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: "cart"
+
+  CartGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref CartResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"cart\", \"httpMethod\": \"POST\", \"userID\": \"$input.path('$.userID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+  CartPutMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref CartResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"cart\", \"httpMethod\": \"PUT\", \"userID\": \"$input.path('$.userID')\", \"itemID\": \"$input.path('$.itemID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+  CartDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref CartResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution
+        Credentials: arn:aws:iam::391508159389:role/LabRole
+        RequestTemplates:
+          "application/json":
+            Fn::Sub: |
+              {
+                "input": "{\"action\": \"cart\", \"httpMethod\": \"DELETE\", \"userID\": \"$input.path('$.userID')\", \"itemID\": \"$input.path('$.itemID')\"}",
+                "stateMachineArn": "${WishlistStateMachine}"
+              }
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseTemplates:
+              "application/json": "#set ($parsedPayload = $util.parseJson($input.json('$.output')))\n$parsedPayload"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseModels:
+            application/json: "Empty"
+
+Outputs:
+  ApiEndpointURL:
+    Description: URL of the API endpoint
+    Value: !Sub https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiEndpointURL

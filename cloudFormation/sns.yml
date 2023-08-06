@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: userID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TableName: UserActivity
+
+  MySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: MySNSTopic
+      TopicName: WishlistAndCartNotifications
+
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: Notify
+      Runtime: python3.9  
+      Handler: index.lambda_handler
+      Role: arn:aws:iam::391508159389:role/LabRole 
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          import time
+
+          def lambda_handler(event, context):
+              sns = boto3.client('sns')
+              dynamodb = boto3.client('dynamodb')
+              
+              # Get the ARN of the SNS topic from the environment variable
+              topic_arn = os.environ['MySNSTopicArn']
+
+              for record in event['Records']:
+                  if record['eventName'] in ['INSERT', 'MODIFY']:
+                      # Extract userID from the DynamoDB event
+                      new_image = record['dynamodb']['NewImage']
+                      user_id = new_image['userID']['S']
+
+                      # Get all existing subscriptions for the SNS topic
+                      subscriptions = sns.list_subscriptions_by_topic(TopicArn=topic_arn)['Subscriptions']
+
+                      # Check if a subscription already exists for the userID
+                      existing_subscription = None
+                      for subscription in subscriptions:
+                          if 'FilterPolicy' in subscription and 'userID' in subscription['FilterPolicy']:
+                              if subscription['FilterPolicy']['userID'] == [user_id]:
+                                  existing_subscription = subscription
+                                  break
+
+                      if not existing_subscription:
+                          # Create a new subscription for the userID (you may use email as an endpoint here)
+                          email_endpoint = f"{user_id}"  # Change the domain as per your requirement
+                          subscription_arn = sns.subscribe(
+                              TopicArn=topic_arn,
+                              Protocol='email',
+                              Endpoint=email_endpoint,
+                              ReturnSubscriptionArn=True,
+                              Attributes={'FilterPolicy': json.dumps({'userID': [user_id]})}
+                          )['SubscriptionArn']
+
+                          # Wait until the subscription status becomes "confirmed"
+                          while True:
+                              response = sns.get_subscription_attributes(SubscriptionArn=subscription_arn)
+                              status = response['Attributes']['PendingConfirmation']
+                              if status == 'false':
+                                  break
+                              time.sleep(5)
+
+                      # Trigger SNS topic with the user's email ID as a message attribute
+                      message = f"Hey!!! {user_id} items in your wishlist and cart are updated based on your recent activity!! Excited to buy?!!!"
+                      subject = "Updated your Cart and Wishlist"  # Subject for the email
+                      sns.publish(
+                          TopicArn=topic_arn,
+                          Message=message,
+                          Subject=subject,
+                          MessageAttributes={
+                              'userID': {
+                                  'DataType': 'String',
+                                  'StringValue': user_id
+                              }
+                          }
+                      )
+
+      Timeout: 60  # Change this if you expect the Lambda function to run longer
+      Environment:
+        Variables:
+          MySNSTopicArn: !Ref MySNSTopic  # Set the SNS topic ARN as an environment variable
+
+  MyLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      EventSourceArn: !GetAtt MyDynamoDBTable.StreamArn
+      FunctionName: !GetAtt MyLambdaFunction.Arn
+      StartingPosition: LATEST
+
+Outputs:
+  MySNSTopicARN:
+    Description: The ARN of the SNS topic
+    Value: !Ref MySNSTopic
+  MyLambdaFunctionARN:
+    Description: The ARN of the Lambda function
+    Value: !GetAtt MyLambdaFunction.Arn
+  MyDynamoDBTableStreamARN:
+    Description: The ARN of the DynamoDB table stream
+    Value: !GetAtt MyDynamoDBTable.StreamArn

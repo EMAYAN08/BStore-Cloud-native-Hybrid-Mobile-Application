@@ -1,0 +1,373 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for creating Lambda functions
+
+Resources:
+  LambdaFetchCartItems:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "FetchCartItems"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.resource('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+
+              # Retrieve the UserActivity table
+              table = dynamodb.Table('UserActivity')
+
+              # Get the cart items for the user
+              response = table.get_item(
+                  Key={
+                      'userID': user_id
+                  }
+              )
+
+              if 'Item' in response:
+                  cart_items = response['Item'].get('cartItemID', [])
+              else:
+                  cart_items = []
+
+              return {
+                  'statusCode': 200,
+                  'body': {
+                      'cartItems': cart_items
+                  }
+              }
+
+  LambdaPutCartItem:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "PutCartItem"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.client('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+              item_id = event['itemID']
+              qty = event.get('qty', 1)  # Get the quantity from the request or default to 1
+
+              try:
+                  # Get the current cart items for the user
+                  response = dynamodb.get_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      }
+                  )
+
+                  cart_items = []
+
+                  if 'Item' in response:
+                      cart_items = response['Item'].get('cartItemID', {'L': []})['L']
+
+                  # Check if the itemID already exists in the cart
+                  item_found = False
+                  for cart_item in cart_items:
+                      if 'M' in cart_item and 'itemID' in cart_item['M']:
+                          if cart_item['M']['itemID']['S'] == item_id:
+                              # Update the quantity if the item already exists in the cart
+                              cart_item['M']['qty']['N'] = str(int(cart_item['M']['qty']['N']) + qty)
+                              item_found = True
+                              break
+
+                  if not item_found:
+                      # Append the new item with qty to the cart if it doesn't exist
+                      cart_items.append({'M': {'itemID': {'S': item_id}, 'qty': {'N': str(qty)}}})
+
+                  # Update the cart items in DynamoDB
+                  dynamodb.update_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      },
+                      UpdateExpression='SET cartItemID = :items',
+                      ExpressionAttributeValues={
+                          ':items': {'L': cart_items}
+                      }
+                  )
+
+                  return {
+                      'statusCode': 200,
+                      'body': 'Item added to cart successfully.'
+                  }
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': f'Error adding item to cart: {str(e)}'
+                  }
+
+  LambdaDeleteCartItem:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "DeleteCartItem"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.client('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+              item_id = event['itemID']
+
+              try:
+                  # Get the current cart items for the user
+                  response = dynamodb.get_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      }
+                  )
+
+                  cart_items = []
+
+                  if 'Item' in response:
+                      cart_items = response['Item'].get('cartItemID', {'L': []})['L']
+
+                  # Find the index of the item with the specified itemID in the cart
+                  index_to_remove = None
+                  for index, cart_item in enumerate(cart_items):
+                      if 'M' in cart_item and 'itemID' in cart_item['M']:
+                          if cart_item['M']['itemID']['S'] == item_id:
+                              index_to_remove = index
+                              break
+
+                  if index_to_remove is not None:
+                      # Remove the item from the cartItems list
+                      cart_items.pop(index_to_remove)
+
+                      # Update the cart items in DynamoDB
+                      dynamodb.update_item(
+                          TableName='UserActivity',
+                          Key={
+                              'userID': {'S': user_id}
+                          },
+                          UpdateExpression='SET cartItemID = :items',
+                          ExpressionAttributeValues={
+                              ':items': {'L': cart_items}
+                          }
+                      )
+
+                      return {
+                          'statusCode': 200,
+                          'body': 'Item deleted from cart successfully.'
+                      }
+                  else:
+                      return {
+                          'statusCode': 404,
+                          'body': 'Item not found in the cart.'
+                      }
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': f'Error deleting item from cart: {str(e)}'
+                  }
+
+  LambdaFetchWishlistItems:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "FetchWishlistItems"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.resource('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+
+              # Retrieve the UserActivity table
+              table = dynamodb.Table('UserActivity')
+
+              # Get the wishlist items for the user
+              response = table.get_item(
+                  Key={
+                      'userID': user_id
+                  }
+              )
+
+              if 'Item' in response:
+                  wishlist_items = response['Item'].get('wishlistItemID', [])
+              else:
+                  wishlist_items = []
+
+              return {
+                  'statusCode': 200,
+                  'body': {
+                      'wishlistItems': wishlist_items
+                  }
+              }
+
+  LambdaPutWishlistItem:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "PutWishlistItem"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.client('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+              item_id = event['itemID']
+
+              try:
+                  # Get the current wishlist items for the user
+                  response = dynamodb.get_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      }
+                  )
+
+                  wishlist_items = []
+
+                  if 'Item' in response:
+                      wishlist_items = response['Item'].get('wishlistItemID', {'L': []})['L']
+
+                  # Check if item_id already exists in the wishlist
+                  if {'S': item_id} in wishlist_items:
+                      return {
+                          'statusCode': 200,
+                          'body': 'Item already exists in the wishlist.'
+                      }
+
+                  # Append the new item to the wishlist
+                  wishlist_items.append({'S': item_id})
+
+                  # Update the wishlist items in DynamoDB
+                  dynamodb.update_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      },
+                      UpdateExpression='SET wishlistItemID = :items',
+                      ExpressionAttributeValues={
+                          ':items': {'L': wishlist_items}
+                      }
+                  )
+
+                  return {
+                      'statusCode': 200,
+                      'body': 'Item added to wishlist successfully.'
+                  }
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': f'Error adding item to wishlist: {str(e)}'
+                  }
+
+  LambdaDeleteWishlistItems:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "DeleteWishlistItems"
+      Runtime: "python3.8"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::391508159389:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.client('dynamodb')
+
+          def lambda_handler(event, context):
+              user_id = event['userID']
+              item_id = event['itemID']
+
+              try:
+                  # Get the current wishlist items for the user
+                  response = dynamodb.get_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      }
+                  )
+
+                  wishlist_items = []
+
+                  if 'Item' in response:
+                      wishlist_items = response['Item'].get('wishlistItemID', {'L': []})['L']
+
+                  # Remove the item from the wishlist
+                  wishlist_items = [item for item in wishlist_items if item['S'] != item_id]
+
+                  # Update the wishlist items in DynamoDB
+                  dynamodb.update_item(
+                      TableName='UserActivity',
+                      Key={
+                          'userID': {'S': user_id}
+                      },
+                      UpdateExpression='SET wishlistItemID = :items',
+                      ExpressionAttributeValues={
+                          ':items': {'L': wishlist_items}
+                      }
+                  )
+
+                  return {
+                      'statusCode': 200,
+                      'body': 'Item deleted from wishlist successfully.'
+                  }
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': f'Error deleting item from wishlist: {str(e)}'
+                  }
+
+Outputs:
+  LambdaFetchCartItemsArn:
+    Description: "ARN of Lambda function FetchCartItems"
+    Value: !GetAtt LambdaFetchCartItems.Arn
+    Export:
+      Name: "LambdaFetchCartItemsArn"
+
+  LambdaPutCartItemArn:
+    Description: "ARN of Lambda function PutCartItem"
+    Value: !GetAtt LambdaPutCartItem.Arn
+    Export:
+      Name: "LambdaPutCartItemArn"
+
+  LambdaDeleteCartItemArn:
+    Description: "ARN of Lambda function DeleteCartItem"
+    Value: !GetAtt LambdaDeleteCartItem.Arn
+    Export:
+      Name: "LambdaDeleteCartItemArn"
+
+  LambdaFetchWishlistItemsArn:
+    Description: "ARN of Lambda function FetchWishlistItems"
+    Value: !GetAtt LambdaFetchWishlistItems.Arn
+    Export:
+      Name: "LambdaFetchWishlistItemsArn"
+
+  LambdaPutWishlistItemArn:
+    Description: "ARN of Lambda function PutWishlistItem"
+    Value: !GetAtt LambdaPutWishlistItem.Arn
+    Export:
+      Name: "LambdaPutWishlistItemArn"
+
+  LambdaDeleteWishlistItemsArn:
+    Description: "ARN of Lambda function DeleteWishlistItems"
+    Value: !GetAtt LambdaDeleteWishlistItems.Arn
+    Export:
+      Name: "LambdaDeleteWishlistItemsArn"

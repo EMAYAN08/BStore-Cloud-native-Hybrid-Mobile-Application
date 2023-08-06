@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: bstore-db-image
+
+  CategoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: category
+      AttributeDefinitions:
+        - AttributeName: CategoryName
+          AttributeType: S
+        - AttributeName: CategoryMainImage
+          AttributeType: S
+      KeySchema:
+        - AttributeName: CategoryName
+          KeyType: HASH
+        - AttributeName: CategoryMainImage
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ProductTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: products
+      AttributeDefinitions:
+        - AttributeName: ProductTitle
+          AttributeType: S
+        - AttributeName: ProductType
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ProductTitle
+          KeyType: HASH
+        - AttributeName: ProductType
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: ProductTypeIndex
+          KeySchema:
+            - AttributeName: ProductType
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+
+Outputs:
+  ImageBucketName:
+    Value: !Ref ImageBucket
+  CategoryTableName:
+    Value: !Ref CategoryTable
+  ProductTableName:
+    Value: !Ref ProductTable
+  ImageBucketAccessRoleArn:
+    Value: "arn:aws:iam::391508159389:role/LabRole"
