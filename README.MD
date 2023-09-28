@@ -1,7 +1,7 @@
 # BStore: Your Ultimate Beauty Products Store
 
 
-BStore is cloud native hybrid mobile application project that leverages React Native and several AWS services to create a captivating, user-friendly mobile app for a beauty product shop.
+BStore is cloud native hybrid mobile application project that leverages React Native and several AWS services to create a captivating, user-friendly mobile app for a beauty products shop.
 
 ## React Native
 React Native is a popular JavaScript framework for building native mobile apps using a single codebase. You will develop cross-platform mobile applications for both iOS and Android platforms, leveraging the efficiency and flexibility of React Native.
